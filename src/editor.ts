@@ -12,6 +12,7 @@ export class Editor {
 	private lastKill: vscode.Position // if kill position stays the same, append to clipboard
 	private justDidKill: boolean
 	private centerState: RecenterPosition
+	private cursorMovementEvent: vscode.Disposable; // Listen for cursor movement events
 
 	constructor() {
 		this.justDidKill = false
@@ -26,9 +27,6 @@ export class Editor {
 				this.lastKill = null
 			}
 			this.justDidKill = false
-		})
-		vscode.window.onDidChangeTextEditorSelection(event => {
-			this.centerState = RecenterPosition.Middle
 		})
 	}
 
@@ -209,6 +207,16 @@ export class Editor {
 				vscode.commands.executeCommand("scrollPageUp");
 				break;
 		}
+
+		// The FIRST time the cursor moves, reset the state to "Middle".
+		if (this.cursorMovementEvent === undefined) {
+			this.cursorMovementEvent = vscode.window.onDidChangeTextEditorSelection(event => {
+				this.centerState = RecenterPosition.Middle
+				// Dispose event, we no longer care until next time C-l is triggered
+				this.cursorMovementEvent.dispose()
+				this.cursorMovementEvent = undefined
+			})
+		}			
 	}
 
 	breakLine() {
